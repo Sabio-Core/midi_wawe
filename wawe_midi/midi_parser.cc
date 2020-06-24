@@ -118,7 +118,7 @@ int main(int, char**)
 		file.read(&track[i][0], trk_length);
 	}
 
-	size_t trk = 1;
+	size_t trk = 5;
 
 	std::cout << "Для демонстрации будем работать только с дорожкой " << trk << std::endl;
 
@@ -131,6 +131,7 @@ int main(int, char**)
 		{10., 0.1, 1., 0.00009, 0.0001, 0.9, 0.5, 0.5} } };
 
 	size_t p = 0;
+	unsigned note_now;
 	while (p < track[trk].size()) {
 		unsigned delta = 0;
 		unsigned delta_v;
@@ -141,8 +142,11 @@ int main(int, char**)
 		} while (delta_v & 0x80U);
 		std::cout << std::dec << std::setw(10) << delta << ": ";
 
+		SDL_Delay(delta);
+
 		unsigned event_type = unsigned (track[trk][p++]) & 0xffU;
 		char old_event_type;
+
 		std::cout << std::hex << event_type;
 		if ((event_type & 0x80) == 0) {
 		  --p;
@@ -150,6 +154,7 @@ int main(int, char**)
 		} else {
 		  old_event_type = event_type & 0xffU;
 		}
+
 		switch(event_type) {
 			case 0xff: {
 				std::cout << std::endl << " Это метасобытие ";
@@ -260,15 +265,18 @@ int main(int, char**)
 			    unsigned velocity = unsigned(track[trk][p++]) & 0x7fU;
 			    std::cout << " - Событие Note Off на канале " << chan <<  std::hex << ", выключаем ноту " << note << " со скоростью "  << velocity << std::endl;
 
-			    auto fm = std::make_shared<FMWaveGenerator>();
-			    auto eg = std::make_shared<ConstantEnvelopeGenerator>(velocity);
+			    if(note_now == note) {
+					auto fm = std::make_shared<FMWaveGenerator>();
+					auto eg = std::make_shared<ConstantEnvelopeGenerator>(velocity);
 
-			    fm->set_freq(note_gz[note]);
-			    fm->setup(inst);
-			    src->set_envelope_generator(eg);
-			    src->set_wave_generator(fm);
+					fm->set_freq(note_gz[note]);
+					fm->setup(inst);
+					src->set_envelope_generator(eg);
+					src->set_wave_generator(fm);
 
-			    fm->key_off();
+					fm->key_off();
+			    }
+
 			} break;
 			case 0x90 ... 0x9f: {
 
@@ -287,6 +295,9 @@ int main(int, char**)
 				src->set_wave_generator(fm);
 
 				fm->key_on();
+
+				note_now = note;
+
 			} break;
 
 			case 0xa0 ... 0xaf:
@@ -304,9 +315,10 @@ int main(int, char**)
 			} break;
 
 			case 0xd0 ... 0xdf: {
-				unsigned par1 = unsigned(track[trk][p++]) & 0xffU;
-				unsigned par2 = unsigned(track[trk][p++]) & 0xffU;
-				std::cout << " - канальный Aftertouch : нота "<< par1 << ", значение " << par2 << std::endl;
+				//unsigned par1 = unsigned(track[trk][p++]) & 0xffU;
+				//unsigned par2 = unsigned(track[trk][p++]) & 0xffU;
+				//std::cout << " - канальный Aftertouch : нота "<< par1 << ", значение " << par2 << std::endl;
+				std::cout << " - канальный Aftertouch" << std::endl;
 			} break;
 			case 0xe0 ... 0xef:{
 				unsigned par1 = unsigned(track[trk][p++]) & 0xffU;
@@ -335,7 +347,7 @@ int main(int, char**)
 				std::cout << std::endl;
 			}
 		}
-		SDL_Delay(delta);
+
 	}
 
 
